@@ -843,6 +843,113 @@ class Power_law_on_sphere(Function2D):
         return np.ones_like( z )
  
 
+
+
+
+
+class Rectangle_gal(Function2D):
+    r"""
+        description :
+        
+            A simple rectangle distribution around the Galactic plane
+        
+        latex : $$ K $$
+        
+        parameters :
+        
+            K :
+        
+                desc : normalization
+                initial value : 1
+        
+            b_min :
+        
+                desc : min Latitude
+                initial value : -5
+        
+            b_max :
+        
+                desc : max Latitude
+                initial value : 5
+        
+        
+            l_min :
+        
+                desc : min Longitude
+                initial value : 10
+        
+            l_max :
+        
+                desc : max Longitude
+                initial value : 30
+        
+        """
+    
+    __metaclass__ = FunctionMeta
+    
+    # This is optional, and it is only needed if we need more setup after the
+    # constructor provided by the meta class
+    
+    def _setup(self):
+        
+        self._frame = ICRS()
+    
+    def set_frame(self, new_frame):
+        """
+            Set a new frame for the coordinates (the default is ICRS J2000)
+            
+            :param new_frame: a coordinate frame from astropy
+            :return: (none)
+            """
+        assert isinstance(new_frame, BaseCoordinateFrame)
+        
+        self._frame = new_frame
+    
+    def _set_units(self, x_unit, y_unit, z_unit):
+        
+        self.K.unit = z_unit
+        self.l_min.unit = y_unit
+        self.l_max.unit = y_unit
+        self.b_min.unit = x_unit
+        self.b_max.unit = x_unit
+    
+    def evaluate(self, x, y, K, b_min, b_max, l_min, l_max):
+        
+        # We assume x and y are R.A. and Dec
+        _coord = SkyCoord(ra=x, dec=y, frame=self._frame, unit="deg")
+        
+        b = _coord.transform_to('galactic').b.value
+        l = _coord.transform_to('galactic').l.value
+        
+        #return K * np.logical_or(np.logical_and(l > l_min, l < l_max),np.logical_and(l_min > l_max, np.logical_or(l > l_min, l < l_max))) * np.logical_or(np.logical_and(b > b_min, b < b_max),np.logical_and(b_min > b_max, np.logical_or(b > b_min, b < b_max))) #PENDING
+        
+        #       return K * np.logical_or(np.logical_and(l > l_min, l < l_max),np.logical_and(l_min > l_max, np.logical_or(l > l_min, l < l_max))) * np.logical_and(b > b_min, b < b_max)  #PENDING
+        return np.logical_or(np.logical_and(l > l_min, l < l_max),np.logical_and(l_min > l_max, np.logical_or(l > l_min, l < l_max))) * np.logical_and(b > b_min, b < b_max)  #PENDING np.power(180 / np.pi, 2) * 1.0/((l_max - l_min)*(b_max-b_min)) *
+    #np.power(180. / np.pi, 2) * 1.0/((l_max - l_min)*(b_max-b_min))*
+    
+    def get_boundaries(self):
+        
+        l_min = self.l_min.value
+        l_max = self.l_max.value
+        
+        b_min = self.b_min.value
+        b_max = self.b_max.value
+        
+        print l_min, l_max
+        print b_min, b_max
+        
+        _coord = SkyCoord(l=[l_min, l_min, l_max, l_max], b=[b_min, b_max, b_max, b_min], frame="galactic", unit="deg")
+        
+        # no dealing with 0 360 overflow
+        min_lat = min(_coord.transform_to("icrs").dec.value)
+        max_lat = max(_coord.transform_to("icrs").dec.value)
+        min_lon = min(_coord.transform_to("icrs").ra.value)
+        max_lon = max(_coord.transform_to("icrs").ra.value)
+        
+        return (min_lon, max_lon), (min_lat, max_lat)
+#############################################################################
+
+
 # class FunctionIntegrator(Function2D):
 #     r"""
 #         description :
